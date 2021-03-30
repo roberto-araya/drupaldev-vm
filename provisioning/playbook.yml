@@ -1,0 +1,97 @@
+- hosts: all
+  become: yes
+  vars_files:
+    - vars/main.yml
+  roles:
+    - geerlingguy.docker
+    - geerlingguy.php
+    - geerlingguy.composer
+    - geerlingguy.nodejs
+
+  tasks:
+  # update cache
+  - name: update apt cache
+    apt:
+      update_cache: yes
+
+  # update distro
+  - name: upgrade packages
+    apt:
+      upgrade: dist
+
+  - name: check if reboot is required
+    register: reboot_required_file
+    stat:
+      path: /var/run/reboot-required get_md5=no
+
+  - name: restart machine
+    reboot:
+      msg: "Reboot initiated by Ansible"
+    when: reboot_required_file.stat.exists == true
+
+  - name: waiting for machine to come back
+    wait_for_connection:
+      delay: 10
+      connect_timeout: 300
+    when: reboot_required_file.stat.exists == true
+
+  # Install ruby
+  - name: Install ruby
+    apt:
+      name: ruby
+      state: present
+
+  # Install pygmy
+  - name: Install pygmy
+    command: gem install pygmy
+
+  # Install ahoy
+  - name: Download ahoy
+    get_url:
+      url: https://github.com/ahoy-cli/ahoy/releases/download/2.0.0/ahoy-bin-linux-amd64
+      dest: /usr/local/bin/ahoy
+      mode: '0550'
+
+  # Add ahoy ownership to vagrant user
+  - name: Add ahoy ownership to vagrant user
+    ansible.builtin.file:
+      path: /usr/local/bin/ahoy
+      owner: vagrant
+      group: vagrant
+      mode: '0544'
+
+  # Install lando
+  - name: Download lando
+    get_url:
+      url: https://files.devwithlando.io/lando-stable.deb
+      dest: /home/vagrant/lando-stable.deb
+      mode: '0550'
+
+  # Install lando
+  - name: Install lando
+    command: dpkg -i --ignore-depends=docker-ce /home/vagrant/lando-stable.deb
+
+  # sudo groupadd docker
+  - name: Create "docker" group
+    group:
+      name: "docker"
+      state: present
+
+  # sudo usermod -aG docker root
+  - name: Add "vagrant" user to "docker" group
+    user:
+      name: "vagrant"
+      group: "docker"
+      append: yes
+
+  # Install vscode a snap with classic confinement
+  - name: Install "vscode" with option --classic
+    snap:
+      name: code
+      classic: yes
+
+  # Install phpstorm a snap with classic confinement
+  - name: Install "phpstorm" with option --classic
+    snap:
+      name: phpstorm
+      classic: yes

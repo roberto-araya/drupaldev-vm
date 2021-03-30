@@ -1,0 +1,8 @@
+---
+# Available `vagrant_box` values include:
+#   - roberto-araya/kubuntu2004
+#   - roberto-araya/lubuntu2004
+vagrant_box: roberto-araya/kubuntu2004
+
+vagrant_hostname: drupaldev.env
+vagrant_machine_name: drupaldev
